@@ -160,18 +160,18 @@ void cmain() {
 
         console_printf("Decodificado s: %d\n", s_start_dec);
         console_printf("Decodificado c: %d\n", c_start_dec);
-        unsigned int start_value;
 
+        unsigned int start_value;
         start_value = c_start_dec * 63 * 16 + s_start_dec * 63 + (h_start - 1);
 
         console_printf("%d\n", start_value);
 
-        console_printf("h: %x\n", bs->partition_table[i].h_start);
-        console_printf("h: %x\n", bs->partition_table[i].h_end);
-        console_printf("s: %x\n", bs->partition_table[i].s_start);
-        console_printf("s: %x\n", bs->partition_table[i].s_end);
-        console_printf("c: %x\n", bs->partition_table[i].c_start);
-        console_printf("c: %x\n", bs->partition_table[i].c_end);
+        console_printf("h start: %x\n", bs->partition_table[i].h_start);
+        console_printf("h end: %x\n", bs->partition_table[i].h_end);
+        console_printf("s start: %x\n", bs->partition_table[i].s_start);
+        console_printf("s end: %x\n", bs->partition_table[i].s_end);
+        console_printf("c start: %x\n", bs->partition_table[i].c_start);
+        console_printf("c end: %x\n", bs->partition_table[i].c_end);
 
         /* Leer a buf del primer dispositivo el sector 0 (1 sector). */
         res = ata_read(dev, super, start_value + 2, 2);
@@ -187,7 +187,11 @@ void cmain() {
           console_printf("ATA read successful.\n");
         }
 
-        console_printf("%d\n", sblock->s_inodes_count);
+        console_printf("s_inodes_count: %d\n", sblock->s_inodes_count);
+        console_printf("s_blocks_count: %d\n", sblock->s_blocks_count);
+        console_printf("s_r_blocks_count: %d\n", sblock->s_r_blocks_count);
+        console_printf("s_free_blocks_count: %d\n",
+                       sblock->s_free_blocks_count);
       }
     }
   }
