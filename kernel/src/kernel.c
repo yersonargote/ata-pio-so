@@ -43,6 +43,53 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
   unsigned int s_inodes_count;
+  unsigned int s_blocks_count;
+  unsigned int s_r_blocks_count;
+  unsigned int s_free_blocks_count;
+  unsigned int s_free_inodes_count;
+  unsigned int s_first_data_block;
+  unsigned int s_log_block_size;
+  unsigned int s_log_frag_size;
+  unsigned int s_blocks_per_group;
+  unsigned int s_frags_per_group;
+  unsigned int s_inodes_per_group;
+  unsigned int s_mtime;
+  unsigned int s_wtime;
+  unsigned short s_mnt_count;
+  unsigned short s_max_mnt_count;
+  unsigned short s_magic;
+  unsigned short s_state;
+  unsigned short s_errors;
+  unsigned short s_minor_rev_level;
+  unsigned int s_lastcheck;
+  unsigned int s_checkinterval;
+  unsigned int s_creator_os;
+  unsigned int s_rev_level;
+  unsigned short s_def_resuid;
+  unsigned short s_def_resgid;
+  unsigned int s_first_ino;
+  unsigned short s_inode_size;
+  unsigned short s_block_group_nr;
+  unsigned int s_feature_compat;
+  unsigned int s_feature_incompat;
+  unsigned int s_feature_ro_compat;
+  char s_uuid[16];
+  char s_volume_name[16];
+  char s_last_mounted[64];
+  unsigned int s_algo_bitmap;
+  char s_prealloc_blocks;
+  char s_prealloc_dir_blocks;
+  unsigned short s_aligment;
+  char s_journal_uuid[16];
+  unsigned int s_journal_inum;
+  unsigned int s_journal_dev;
+  unsigned int s_last_orphan;
+  char s_hash_seed[4][4];
+  char s_def_hash_version;
+  char s_padding[3];
+  unsigned int s_default_mount_options;
+  unsigned int s_first_meta_bg;
+  char s_unused[760];
 } superblock;
 
 void cmain() {
@@ -113,10 +160,11 @@ void cmain() {
 
         console_printf("Decodificado s: %d\n", s_start_dec);
         console_printf("Decodificado c: %d\n", c_start_dec);
-        unsigned int s_value;
-        s_value = c_start_dec * 63 * 16 + s_start_dec * 63 + (h_start - 1);
+        unsigned int start_value;
 
-        console_printf("%d\n", s_value);
+        start_value = c_start_dec * 63 * 16 + s_start_dec * 63 + (h_start - 1);
+
+        console_printf("%d\n", start_value);
 
         console_printf("h: %x\n", bs->partition_table[i].h_start);
         console_printf("h: %x\n", bs->partition_table[i].h_end);
@@ -126,9 +174,11 @@ void cmain() {
         console_printf("c: %x\n", bs->partition_table[i].c_end);
 
         /* Leer a buf del primer dispositivo el sector 0 (1 sector). */
-        res = ata_read(dev, super, s_value + 2, 2);
+        res = ata_read(dev, super, start_value + 2, 2);
 
         superblock *sblock = (superblock *)super;
+
+        console_printf("Super size: %d\n", sizeof(*sblock));
 
         if (res == -1) {
           console_printf("Unable to read from ATA Device!\n");
