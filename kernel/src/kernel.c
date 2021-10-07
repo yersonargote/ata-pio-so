@@ -92,6 +92,12 @@ typedef struct __attribute__((packed)) {
   char s_unused[760];
 } superblock;
 
+void decodeSC(unsigned char s, unsigned char c, unsigned int *s_decode,
+              unsigned int *c_decode) {
+  *s_decode = (s & 0x3F);
+  *c_decode = ((s & 0xC0) << 2) | c;
+}
+
 void cmain() {
 
   char buf[512];
@@ -148,6 +154,8 @@ void cmain() {
     if (bs->partition_table[i].active != 0x0) {
       if (bs->partition_table[i].type == 0x83) {
 
+        unsigned int start_value;
+
         unsigned char h_start = bs->partition_table[i].h_start;
         unsigned char h_end = bs->partition_table[i].h_end;
         unsigned char s_start = bs->partition_table[i].s_start;
@@ -155,14 +163,24 @@ void cmain() {
         unsigned char c_start = bs->partition_table[i].c_start;
         unsigned char c_end = bs->partition_table[i].c_end;
 
-        unsigned int s_start_dec = (s_start & 111111);
-        unsigned int c_start_dec = ((s_start >> 6) << 8) | c_start;
+        if ((c_start == 0xFE && h_start == 0xFF && s_start == 0xFF) ||
+            (c_end == 0xFE && h_end == 0xFF && s_end == 0xFF)) {
+          start_value = bs->partition_table[i].lba;
+        } else {
+          unsigned int s_start_dec;
+          unsigned int c_start_dec;
+          unsigned int s_end_dec;
+          unsigned int c_end_dec;
 
-        console_printf("Decodificado s: %d\n", s_start_dec);
-        console_printf("Decodificado c: %d\n", c_start_dec);
-
-        unsigned int start_value;
-        start_value = c_start_dec * 63 * 16 + s_start_dec * 63 + (h_start - 1);
+          decodeSC(s_start, c_start, &s_start_dec, &c_start_dec);
+          decodeSC(s_end, c_end, &s_end_dec, &c_end_dec);
+          console_printf("s_start_dec: %d - c_start_dec: %d\n", s_start_dec,
+                         c_start_dec);
+          console_printf("s_end_dec: %d - c_end_dec: %d\n", s_end_dec,
+                         c_end_dec);
+          start_value =
+              (c_start_dec * 63 * 16) + (h_start * 63) + (s_start_dec - 1);
+        }
 
         console_printf("%d\n", start_value);
 
@@ -172,6 +190,8 @@ void cmain() {
         console_printf("s end: %x\n", bs->partition_table[i].s_end);
         console_printf("c start: %x\n", bs->partition_table[i].c_start);
         console_printf("c end: %x\n", bs->partition_table[i].c_end);
+        console_printf("lba_start: %d\n", bs->partition_table[i].lba);
+        console_printf("lba_size: %d\n", bs->partition_table[i].size_lba);
 
         /* Leer a buf del primer dispositivo el sector 0 (1 sector). */
         res = ata_read(dev, super, start_value + 2, 2);
