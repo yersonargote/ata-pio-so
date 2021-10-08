@@ -136,6 +136,7 @@ unsigned int partition_start(partition part_tbl) {
     console_printf("End: ");
     console_printf("c=%d h=%d s=%d\n", c_end_dec, h_end, s_end_dec);
 
+    // calcula sector donde empieza la particion
     start_value = (c_start_dec * 63 * 16) + (h_start * 63) + (s_start_dec - 1);
   }
 
@@ -231,15 +232,15 @@ void cmain() {
 
         start_value = partition_start(part_tbl);
 
-        // Casting del superbloque
-        superblock *sblock = (superblock *)super;
-
         res = ata_read(dev, super, start_value + 2, 2);
 
         if (res == -1) {
           console_printf("Unable to read from ATA Device!\n");
           return;
         }
+
+        // Casting del superbloque
+        superblock *sblock = (superblock *)super;
 
         print_superblock_info(sblock);
       }
