@@ -154,7 +154,7 @@ void print_superblock_info(superblock *sblock) {
   console_printf("----------------------------");
   console_printf("Superblock information");
   console_printf("----------------------------\n");
-  console_printf("Superblock size: %d\n", sizeof(*sblock));
+  /* console_printf("Superblock size: %d\n", sizeof(*sblock)); */
   console_printf("s_inodes_count: %d - ", sblock->s_inodes_count);
   console_printf("s_blocks_count: %d - ", sblock->s_blocks_count);
   console_printf("s_r_blocks_count: %d\n", sblock->s_r_blocks_count);
