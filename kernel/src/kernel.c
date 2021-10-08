@@ -152,26 +152,30 @@ void cmain() {
   int i;
 
   for (i = 0; i < 4; i++) {
-    if (bs->partition_table[i].active != NO_ACTIVE) {
-      if (bs->partition_table[i].type == LINUX_TYPE) {
+    partition part = (partition)bs->partition_table[i];
 
-        console_printf("Partition table information\n");
+    if (part.active != NO_ACTIVE) {
+      if (part.type == LINUX_TYPE) {
+
+        console_printf("-------------------------");
+        console_printf("Partition table information");
+        console_printf("-------------------------\n");
         // Variable que almacena el calculo del inicio de la particion.
         unsigned int start_value;
 
         // Variables que almacenan los valores de C/H/S de inicio y de fin.
-        unsigned char h_start = bs->partition_table[i].h_start;
-        unsigned char h_end = bs->partition_table[i].h_end;
-        unsigned char s_start = bs->partition_table[i].s_start;
-        unsigned char s_end = bs->partition_table[i].s_end;
-        unsigned char c_start = bs->partition_table[i].c_start;
-        unsigned char c_end = bs->partition_table[i].c_end;
+        unsigned char h_start = part.h_start;
+        unsigned char h_end = part.h_end;
+        unsigned char s_start = part.s_start;
+        unsigned char s_end = part.s_end;
+        unsigned char c_start = part.c_start;
+        unsigned char c_end = part.c_end;
 
         // Validacion que determina si la particion inicia o termina por fuera
         // del cilindro 1024.
         if ((c_start == 0xFE && h_start == 0xFF && s_start == 0xFF) ||
             (c_end == 0xFE && h_end == 0xFF && s_end == 0xFF)) {
-          start_value = bs->partition_table[i].lba;
+          start_value = part.lba;
         } else {
           // Variables que almacenan los valores de S y C decodificados.
           unsigned int s_start_dec;
@@ -191,10 +195,10 @@ void cmain() {
               (c_start_dec * 63 * 16) + (h_start * 63) + (s_start_dec - 1);
         }
 
-        console_printf("Active: %x\n", bs->partition_table[i].active);
-        console_printf("Type: %x\n", bs->partition_table[i].type);
-        console_printf("LBA start: %d\n", bs->partition_table[i].lba);
-        console_printf("LBA size: %d\n", bs->partition_table[i].size_lba);
+        console_printf("Active: %x\n", part.active);
+        console_printf("Type: %x\n", part.type);
+        console_printf("LBA start: %d\n", part.lba);
+        console_printf("LBA size: %d\n", part.size_lba);
 
         console_printf("Partition start in sector: %d\n", start_value);
 
@@ -203,14 +207,15 @@ void cmain() {
         // Casting del superbloque
         superblock *sblock = (superblock *)super;
 
-        console_printf("Superblock size: %d\n", sizeof(*sblock));
-
         if (res == -1) {
           console_printf("Unable to read from ATA Device!\n");
           return;
         }
 
-        console_printf("Superblock information\n");
+        console_printf("----------------------------");
+        console_printf("Superblock information");
+        console_printf("----------------------------\n");
+        console_printf("Superblock size: %d\n", sizeof(*sblock));
         console_printf("s_inodes_count: %d - ", sblock->s_inodes_count);
         console_printf("s_blocks_count: %d - ", sblock->s_blocks_count);
         console_printf("s_r_blocks_count: %d\n", sblock->s_r_blocks_count);
