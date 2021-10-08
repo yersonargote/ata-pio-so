@@ -36,7 +36,6 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
   unsigned char loader[446];
-  /* unsigned char partition_table[64]; */
   partition partition_table[4];
   unsigned short signature;
 } bootsector;
@@ -99,6 +98,77 @@ void decodeSC(unsigned char s, unsigned char c, unsigned int *s_decode,
   *c_decode = ((s & 0xC0) << 2) | c;
 }
 
+// Obtener donde empieza la particion
+unsigned int partition_start(partition part_tbl) {
+
+  console_printf("-------------------------");
+  console_printf("Partition table information");
+  console_printf("-------------------------\n");
+
+  // Variable que almacena el calculo del inicio de la particion.
+  unsigned int start_value;
+
+  // Variables que almacenan los valores de C/H/S de inicio y de fin.
+  unsigned char h_start = part_tbl.h_start;
+  unsigned char h_end = part_tbl.h_end;
+  unsigned char s_start = part_tbl.s_start;
+  unsigned char s_end = part_tbl.s_end;
+  unsigned char c_start = part_tbl.c_start;
+  unsigned char c_end = part_tbl.c_end;
+
+  // Validacion que determina si la particion inicia o termina por fuera
+  // del cilindro 1024.
+  if ((c_start == 0xFE && h_start == 0xFF && s_start == 0xFF) ||
+      (c_end == 0xFE && h_end == 0xFF && s_end == 0xFF)) {
+    start_value = part_tbl.lba;
+  } else {
+    // Variables que almacenan los valores de S y C decodificados.
+    unsigned int s_start_dec;
+    unsigned int c_start_dec;
+    unsigned int s_end_dec;
+    unsigned int c_end_dec;
+
+    decodeSC(s_start, c_start, &s_start_dec, &c_start_dec);
+    decodeSC(s_end, c_end, &s_end_dec, &c_end_dec);
+
+    console_printf("Start: ");
+    console_printf("c=%d h=%d s=%d\n", c_start_dec, h_start, s_start_dec);
+    console_printf("End: ");
+    console_printf("c=%d h=%d s=%d\n", c_end_dec, h_end, s_end_dec);
+
+    start_value = (c_start_dec * 63 * 16) + (h_start * 63) + (s_start_dec - 1);
+  }
+
+  console_printf("Active: %x\n", part_tbl.active);
+  console_printf("Type: %x\n", part_tbl.type);
+  console_printf("LBA start: %d\n", part_tbl.lba);
+  console_printf("LBA size: %d\n", part_tbl.size_lba);
+
+  console_printf("Partition start in sector: %d\n", start_value);
+  return start_value;
+}
+
+// Imprimir la informacion del superbloque
+void print_superblock_info(superblock *sblock) {
+  console_printf("----------------------------");
+  console_printf("Superblock information");
+  console_printf("----------------------------\n");
+  console_printf("Superblock size: %d\n", sizeof(*sblock));
+  console_printf("s_inodes_count: %d - ", sblock->s_inodes_count);
+  console_printf("s_blocks_count: %d - ", sblock->s_blocks_count);
+  console_printf("s_r_blocks_count: %d\n", sblock->s_r_blocks_count);
+  console_printf("s_free_blocks_count: %d - ", sblock->s_free_blocks_count);
+  console_printf("s_log_block_size: %d - ", sblock->s_log_block_size);
+  console_printf("block size: %d\n", 1024 << sblock->s_log_block_size);
+  console_printf("s_log_frag_size: %d - ", sblock->s_log_frag_size);
+  console_printf("s_inodes_per_group: %d - ", sblock->s_inodes_per_group);
+  console_printf("s_max_mnt_count: %d\n", sblock->s_max_mnt_count);
+  console_printf("s_state: %d - ", sblock->s_state);
+  console_printf("s_creator_os: %d\n", sblock->s_creator_os);
+  console_printf("s_first_ino: %d - ", sblock->s_first_ino);
+  console_printf("s_inode_size: %d\n", sblock->s_inode_size);
+}
+
 void cmain() {
 
   char buf[512];
@@ -152,84 +222,26 @@ void cmain() {
   int i;
 
   for (i = 0; i < 4; i++) {
-    partition part = (partition)bs->partition_table[i];
+    partition part_tbl = (partition)bs->partition_table[i];
 
-    if (part.active != NO_ACTIVE) {
-      if (part.type == LINUX_TYPE) {
+    if (part_tbl.active != NO_ACTIVE) {
+      if (part_tbl.type == LINUX_TYPE) {
 
-        console_printf("-------------------------");
-        console_printf("Partition table information");
-        console_printf("-------------------------\n");
-        // Variable que almacena el calculo del inicio de la particion.
         unsigned int start_value;
 
-        // Variables que almacenan los valores de C/H/S de inicio y de fin.
-        unsigned char h_start = part.h_start;
-        unsigned char h_end = part.h_end;
-        unsigned char s_start = part.s_start;
-        unsigned char s_end = part.s_end;
-        unsigned char c_start = part.c_start;
-        unsigned char c_end = part.c_end;
-
-        // Validacion que determina si la particion inicia o termina por fuera
-        // del cilindro 1024.
-        if ((c_start == 0xFE && h_start == 0xFF && s_start == 0xFF) ||
-            (c_end == 0xFE && h_end == 0xFF && s_end == 0xFF)) {
-          start_value = part.lba;
-        } else {
-          // Variables que almacenan los valores de S y C decodificados.
-          unsigned int s_start_dec;
-          unsigned int c_start_dec;
-          unsigned int s_end_dec;
-          unsigned int c_end_dec;
-
-          decodeSC(s_start, c_start, &s_start_dec, &c_start_dec);
-          decodeSC(s_end, c_end, &s_end_dec, &c_end_dec);
-
-          console_printf("Start: ");
-          console_printf("c=%d h=%d s=%d\n", c_start_dec, h_start, s_start_dec);
-          console_printf("End: ");
-          console_printf("c=%d h=%d s=%d\n", c_end_dec, h_end, s_end_dec);
-
-          start_value =
-              (c_start_dec * 63 * 16) + (h_start * 63) + (s_start_dec - 1);
-        }
-
-        console_printf("Active: %x\n", part.active);
-        console_printf("Type: %x\n", part.type);
-        console_printf("LBA start: %d\n", part.lba);
-        console_printf("LBA size: %d\n", part.size_lba);
-
-        console_printf("Partition start in sector: %d\n", start_value);
-
-        res = ata_read(dev, super, start_value + 2, 2);
+        start_value = partition_start(part_tbl);
 
         // Casting del superbloque
         superblock *sblock = (superblock *)super;
+
+        res = ata_read(dev, super, start_value + 2, 2);
 
         if (res == -1) {
           console_printf("Unable to read from ATA Device!\n");
           return;
         }
 
-        console_printf("----------------------------");
-        console_printf("Superblock information");
-        console_printf("----------------------------\n");
-        console_printf("Superblock size: %d\n", sizeof(*sblock));
-        console_printf("s_inodes_count: %d - ", sblock->s_inodes_count);
-        console_printf("s_blocks_count: %d - ", sblock->s_blocks_count);
-        console_printf("s_r_blocks_count: %d\n", sblock->s_r_blocks_count);
-        console_printf("s_free_blocks_count: %d - ",
-                       sblock->s_free_blocks_count);
-        console_printf("s_log_block_size: %d - ", sblock->s_log_block_size);
-        console_printf("block size: %d\n", 1024 << sblock->s_log_block_size);
-        console_printf("s_log_frag_size: %d - ", sblock->s_log_frag_size);
-        console_printf("s_inodes_per_group: %d - ", sblock->s_inodes_per_group);
-        console_printf("s_max_mnt_count: %d\n", sblock->s_max_mnt_count);
-        console_printf("s_state: %d - ", sblock->s_state);
-        console_printf("s_creator_os: %d\n", sblock->s_creator_os);
-        console_printf("s_first_ino: %d - ", sblock->s_first_ino);
-        console_printf("s_inode_size: %d\n", sblock->s_inode_size);
+        print_superblock_info(sblock);
       }
     }
   }
